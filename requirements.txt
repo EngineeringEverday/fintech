@@ -1,4 +1,8 @@
+# SettleIQ — runtime dependencies
+# Python 3.10+ required (uses zoneinfo, match statements)
 streamlit>=1.30
-# Stdlib-only otherwise. Optional LLM providers (toggle via USE_REAL_LLM=true):
+
+# All other imports are Python stdlib only.
+# Optional LLM providers (activate with USE_REAL_LLM=true in .env):
 # openai>=1.0
 # anthropic>=0.20

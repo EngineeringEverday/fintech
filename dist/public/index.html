@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PayCommander | Multi-Agent Payment Analytics</title>
+    <meta
+      name="description"
+      content="PayCommander is a deterministic multi-agent payment analytics demo with Streamlit, FastAPI, SQLite, ACH/card mock data, audit logging, and MIS reporting."
+    />
+    <meta property="og:title" content="PayCommander | Multi-Agent Payment Analytics" />
+    <meta
+      property="og:description"
+      content="Recruiter-ready fintech analytics demo: six-agent payment query pipeline, card/ACH mock data, audit traces, and MIS reporting."
+    />
+    <meta property="og:type" content="website" />
+    <style>
+      :root {
+        color-scheme: light;
+        --navy: #0f2a44;
+        --slate: #475569;
+        --emerald: #10a36d;
+        --bg: #f7fafc;
+        --surface: #ffffff;
+        --border: #d7e0ea;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        color: var(--navy);
+        background:
+          radial-gradient(circle at 15% 0%, rgba(16, 163, 109, 0.14), transparent 32rem),
+          linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+      }
+
+      .shell {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        padding: 32px;
+      }
+
+      .card {
+        width: min(760px, 100%);
+        padding: 32px;
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 24px 80px rgba(15, 42, 68, 0.12);
+      }
+
+      .logo {
+        display: inline-grid;
+        width: 44px;
+        height: 44px;
+        margin-bottom: 18px;
+        place-items: center;
+        border-radius: 12px;
+        color: white;
+        background: var(--emerald);
+        font-weight: 800;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      p {
+        margin: 14px 0 0;
+        color: var(--slate);
+        font-size: 16px;
+        line-height: 1.65;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .button.primary {
+        color: white;
+        background: var(--emerald);
+      }
+
+      .button.secondary {
+        border: 1px solid var(--border);
+        color: var(--navy);
+        background: white;
+      }
+
+      .note {
+        margin-top: 18px;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="card" aria-labelledby="title">
+        <div class="logo" aria-hidden="true">P</div>
+        <h1 id="title">PayCommander is launching.</h1>
+        <p>
+          The live Streamlit dashboard is starting in the app sandbox. If it does not open
+          automatically, use the button below to enter the hosted demo.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="/port/8501/" data-testid="link-open-app">Open PayCommander App</a>
+          <a
+            class="button secondary"
+            href="https://github.com/PrabhjotAhluwalia/paycommander"
+            data-testid="link-github"
+            >View GitHub Repo</a
+          >
+        </div>
+        <p class="note">
+          Built by Prabhjot Singh Ahluwalia | Georgia Tech MSCS (AI Specialization)
+        </p>
+      </section>
+    </main>
+    <script>
+      window.setTimeout(() => {
+        window.location.href = "/port/8501/";
+      }, 1200);
+    </script>
+  </body>
+</html>

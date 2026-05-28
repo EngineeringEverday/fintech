@@ -15,6 +15,7 @@ Talks to the FastAPI backend at PAYCOMMANDER_API (default localhost:8000).
 from __future__ import annotations
 
 import json
+import html
 import os
 import sys
 import time
@@ -267,6 +268,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.caption(
+    "Demo data only: merchant names and payment metrics are synthetic portfolio data, "
+    "not real merchant performance or partnerships."
+)
+
 
 # ---------------------------------------------------------------------------
 # Two-panel layout
@@ -309,7 +315,8 @@ with left:
     for m in st.session_state.messages:
         with chat_box:
             if m["role"] == "user":
-                st.markdown(f'<div class="pc-bubble-user">{m["content"]}</div>',
+                safe_content = html.escape(str(m["content"]))
+                st.markdown(f'<div class="pc-bubble-user">{safe_content}</div>',
                             unsafe_allow_html=True)
             else:
                 st.markdown('<div class="pc-bubble-bot">', unsafe_allow_html=True)

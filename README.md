@@ -76,6 +76,8 @@ The system ships with 80+ realistic US merchants, seven days of ACH CSVs, a 100K
 | `data/mock/merchant_profile.json`   | 85 US merchants → MIDs (DoorDash, Uber, PayPal, Stripe, …)      |
 | `data/mock/DOMAIN_REGISTRY.json`    | Metric → skill file mapping for lazy-loaded analyst skills      |
 
+> **Demo data disclaimer:** All merchant names, MIDs, transaction records, routing numbers, and analytics outputs are synthetic demonstration data. Brand names are used only as recognizable mock merchant labels for a portfolio prototype and do not represent real merchant performance, partnerships, or payment activity.
+
 ---
 
 ## Project layout

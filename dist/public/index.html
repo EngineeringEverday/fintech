@@ -492,6 +492,267 @@
         "Auditor Logger",
       ];
 
+      // ----------------------------------------------------------------------
+      // Static-demo fallback. Used on GitHub Pages (or anywhere the FastAPI
+      // backend at /port/8000 is unreachable). Produces deterministic mock
+      // responses for the six preset queries plus a generic catch-all.
+      // ----------------------------------------------------------------------
+      const FALLBACK_STATS = {
+        merchants_tracked: 85,
+        response_target: "<30s",
+        agents: 6,
+        data_sources: 2,
+      };
+
+      function hash32(str) {
+        let h = 2166136261 >>> 0;
+        for (let i = 0; i < str.length; i++) {
+          h ^= str.charCodeAt(i);
+          h = Math.imul(h, 16777619) >>> 0;
+        }
+        return h >>> 0;
+      }
+
+      function buildTrace(query, route, payload5, blocked) {
+        const seed = hash32(query);
+        const lat = (i) => 40 + ((seed >> (i * 3)) & 0x3f) + i * 18;
+        const cost = (i) => (0.0008 + (((seed >> (i * 2)) & 0x1f) * 0.00012)).toFixed(5);
+        const steps = [
+          {
+            agent: "agent1", label: "Main Classifier",
+            status: blocked ? "blocked" : "done",
+            latency_ms: lat(0), token_cost_usd: cost(0),
+            payload: {
+              bucket: blocked ? "injection_attempt" : "data_query",
+              matched_rules: blocked ? ["regex:ignore_previous", "regex:drop_database"] : [],
+              query_length: query.length,
+            },
+          },
+          {
+            agent: "agent2", label: "Query Router",
+            status: blocked ? "skipped" : "done",
+            latency_ms: lat(1), token_cost_usd: cost(1),
+            payload: blocked ? { skipped: "halt_from_agent1" } : route,
+          },
+          {
+            agent: "agent3", label: "Data Analyst",
+            status: blocked ? "skipped" : "done",
+            latency_ms: lat(2), token_cost_usd: cost(2),
+            payload: blocked
+              ? { skipped: "halt_from_agent1" }
+              : { skill: route.skill_file, rows_returned: route.rows_returned, source: route.route === "ach" ? "ach_csv" : "card_dwh" },
+          },
+          {
+            agent: "agent4", label: "Sanity Validation Gate",
+            status: blocked ? "skipped" : "done",
+            latency_ms: lat(3), token_cost_usd: cost(3),
+            payload: blocked
+              ? { skipped: "halt_from_agent1" }
+              : { checks_run: ["range_check", "non_negative", "plausibility"], anomalies: 0 },
+          },
+          {
+            agent: "agent5", label: "Response Formatter",
+            status: blocked ? "blocked" : "done",
+            latency_ms: lat(4), token_cost_usd: cost(4),
+            payload: payload5,
+          },
+          {
+            agent: "agent6", label: "Auditor Logger",
+            status: "done",
+            latency_ms: lat(5), token_cost_usd: cost(5),
+            payload: {
+              run_id: `rid-${seed.toString(16)}`,
+              event_type: blocked ? "CRITICAL_INJECTION" : "QUERY_OK",
+              persisted: true,
+            },
+          },
+        ];
+        return { steps };
+      }
+
+      function fallbackResponse(query) {
+        const q = query.toLowerCase();
+
+        // Injection
+        if (q.includes("ignore previous instructions") || q.includes("drop the database") || q.includes("drop database")) {
+          const md =
+            "### Query Blocked -- Risk Ops Owner Alerted\n" +
+            "- The classifier detected a prompt-injection pattern.\n" +
+            "- Pipeline halted at Agent 1 (Main Classifier).\n" +
+            "- Event logged as **CRITICAL_INJECTION** to the audit log.";
+          const trace = buildTrace(query, {}, { rendered: false, reason: "blocked" }, true);
+          return { answer_markdown: md, blocked: true, anomaly: true, trace };
+        }
+
+        // DoorDash auth rate on Visa this week
+        if (q.includes("doordash") && q.includes("auth") && q.includes("visa")) {
+          const md =
+            "### DoorDash -- Authorization Rate (Visa, this week)\n" +
+            "- **Auth rate:** 92.4% (▲ 0.6 pts WoW)\n" +
+            "- **Approved:** 184,217 / 199,365 attempts\n" +
+            "- **Network:** Visa\n" +
+            "- **Window:** last 7 days\n" +
+            "- **MID:** mid_001 -- DoorDash";
+          const route = {
+            metric_requested: "authorization_rate",
+            merchant_name: "DoorDash",
+            filters: { card_network: "Visa", window_days: 7 },
+            route: "card", skill_file: "skills/domains/authorization_rate.py",
+            rows_returned: 199365,
+          };
+          return {
+            answer_markdown: md, blocked: false, anomaly: false,
+            trace: buildTrace(query, route, { format: "markdown", lines: 5 }, false),
+          };
+        }
+
+        // Top 5 GPV yesterday
+        if (q.includes("top") && (q.includes("gpv") || q.includes("merchants"))) {
+          const md =
+            "### Top 5 Merchants by GPV -- Yesterday (all card networks)\n" +
+            "- **Rank 1 -- Amazon:** $4,812,330.27 (▲ 2.1%)\n" +
+            "- **Rank 2 -- DoorDash:** $3,194,887.55 (▲ 0.8%)\n" +
+            "- **Rank 3 -- Uber:** $2,706,441.10 (▼ 0.4%)\n" +
+            "- **Rank 4 -- PayPal:** $2,488,019.62 (▲ 1.3%)\n" +
+            "- **Rank 5 -- Stripe:** $2,114,773.04 (▲ 0.5%)";
+          const route = {
+            metric_requested: "payment_volume", top_n: 5,
+            filters: { window_days: 1 }, route: "card",
+            skill_file: "skills/domains/payment_volume.py", rows_returned: 5,
+          };
+          return {
+            answer_markdown: md, blocked: false, anomaly: false,
+            trace: buildTrace(query, route, { format: "markdown", lines: 6 }, false),
+          };
+        }
+
+        // Auth rate below 85% last 7 days
+        if (q.includes("below") && q.includes("85") && q.includes("auth")) {
+          const md =
+            "### Merchants with Auth Rate Below 85% -- Last 7 Days\n" +
+            "- **Lyft:** 83.7% (▼ 1.1 pts WoW) -- 41,228 attempts\n" +
+            "- **Wayfair:** 82.4% (▼ 0.8 pts WoW) -- 22,915 attempts\n" +
+            "- **Etsy:** 81.1% (▼ 2.3 pts WoW) -- 18,470 attempts\n" +
+            "- **Chewy:** 80.6% (▼ 0.4 pts WoW) -- 14,201 attempts\n" +
+            "- **GrubHub:** 79.8% (▼ 1.6 pts WoW) -- 11,008 attempts";
+          const route = {
+            metric_requested: "authorization_rate",
+            filters: { auth_rate_below: 0.85, window_days: 7 },
+            route: "card", skill_file: "skills/domains/authorization_rate.py",
+            rows_returned: 5,
+          };
+          return {
+            answer_markdown: md, blocked: false, anomaly: false,
+            trace: buildTrace(query, route, { format: "markdown", lines: 6 }, false),
+          };
+        }
+
+        // Top decline codes Uber this month
+        if (q.includes("decline") && q.includes("uber")) {
+          const md =
+            "### Top Decline Codes -- Uber, This Month\n" +
+            "- **05 Do Not Honor:** 38.2% of declines (12,418 txns)\n" +
+            "- **51 Insufficient Funds:** 27.6% (8,966)\n" +
+            "- **54 Expired Card:** 12.4% (4,031)\n" +
+            "- **61 Exceeds Withdrawal Limit:** 9.7% (3,154)\n" +
+            "- **91 Issuer Unavailable:** 5.3% (1,722)";
+          const route = {
+            metric_requested: "decline_analysis",
+            merchant_name: "Uber",
+            filters: { window_days: 30 },
+            route: "card", skill_file: "skills/domains/decline_analysis.py",
+            rows_returned: 32501,
+          };
+          return {
+            answer_markdown: md, blocked: false, anomaly: false,
+            trace: buildTrace(query, route, { format: "markdown", lines: 6 }, false),
+          };
+        }
+
+        // ACH return rate PayPal 30 days
+        if (q.includes("ach") && q.includes("paypal")) {
+          const md =
+            "### ACH Return Rate -- PayPal, Last 30 Days\n" +
+            "- **ACH Return Rate:** 0.62% (▼ 0.04 pts MoM)\n" +
+            "- **Returned:** 1,148 / 185,193 entries\n" +
+            "- **Top return code:** R01 -- Insufficient Funds (48.7%)\n" +
+            "- **Source:** ACH daily CSV (7-day rolling window x4)\n" +
+            "- **MID:** mid_004 -- PayPal";
+          const route = {
+            metric_requested: "ach_return_rate",
+            merchant_name: "PayPal",
+            filters: { window_days: 30 },
+            route: "ach", skill_file: "skills/domains/ach_returns.py",
+            rows_returned: 185193,
+          };
+          return {
+            answer_markdown: md, blocked: false, anomaly: false,
+            trace: buildTrace(query, route, { format: "markdown", lines: 6 }, false),
+          };
+        }
+
+        // Generic fallback
+        const md =
+          "### Static Demo Mode\n" +
+          "- This GitHub Pages build runs without the live FastAPI backend.\n" +
+          "- Click one of the **preset recruiter queries** above for a full deterministic walkthrough.\n" +
+          "- For the live pipeline (SQLite warehouse, real PDF MIS, audit log), open the pplx.app deployment.";
+        const route = {
+          metric_requested: "unknown", filters: {}, route: "static",
+          skill_file: null, rows_returned: 0,
+        };
+        return {
+          answer_markdown: md, blocked: false, anomaly: false,
+          trace: buildTrace(query, route, { format: "markdown", lines: 4 }, false),
+        };
+      }
+
+      function buildStaticMisHtml() {
+        return (
+          "<!doctype html><html><head><meta charset='utf-8'>" +
+          "<title>PayCommander -- Daily MIS Report (Static Demo)</title>" +
+          "<style>body{font-family:Inter,system-ui,sans-serif;color:#0f2a44;margin:32px;max-width:760px}" +
+          "h1{color:#0f2a44;margin-bottom:6px}.sub{color:#718096;margin-bottom:24px}" +
+          "table{border-collapse:collapse;width:100%;margin:14px 0 28px;font-size:13px}" +
+          "th{background:#0f2a44;color:#fff;text-align:left;padding:8px 10px}" +
+          "td{border:1px solid #d7e0ea;padding:8px 10px}" +
+          "tr:nth-child(even) td{background:#f3f6fa}" +
+          "footer{color:#718096;font-size:11px;margin-top:32px}</style></head><body>" +
+          "<h1>PayCommander -- Daily MIS Report</h1>" +
+          "<div class='sub'>Static demo build (GitHub Pages). Numbers are synthetic.</div>" +
+          "<h2>Top 10 Merchants by GPV (Yesterday)</h2>" +
+          "<table><tr><th>#</th><th>Merchant</th><th>MID</th><th>GPV (USD)</th><th>Txns</th></tr>" +
+          "<tr><td>1</td><td>Amazon</td><td>mid_002</td><td>$4,812,330.27</td><td>61,118</td></tr>" +
+          "<tr><td>2</td><td>DoorDash</td><td>mid_001</td><td>$3,194,887.55</td><td>52,447</td></tr>" +
+          "<tr><td>3</td><td>Uber</td><td>mid_003</td><td>$2,706,441.10</td><td>48,210</td></tr>" +
+          "<tr><td>4</td><td>PayPal</td><td>mid_004</td><td>$2,488,019.62</td><td>43,902</td></tr>" +
+          "<tr><td>5</td><td>Stripe</td><td>mid_005</td><td>$2,114,773.04</td><td>39,118</td></tr>" +
+          "<tr><td>6</td><td>Target</td><td>mid_006</td><td>$1,902,556.41</td><td>34,201</td></tr>" +
+          "<tr><td>7</td><td>Walmart</td><td>mid_007</td><td>$1,748,310.12</td><td>31,884</td></tr>" +
+          "<tr><td>8</td><td>Best Buy</td><td>mid_008</td><td>$1,401,229.85</td><td>26,118</td></tr>" +
+          "<tr><td>9</td><td>Chewy</td><td>mid_009</td><td>$1,184,420.66</td><td>22,003</td></tr>" +
+          "<tr><td>10</td><td>Wayfair</td><td>mid_010</td><td>$1,002,118.74</td><td>19,447</td></tr></table>" +
+          "<h2>Average Authorization Rate by Card Network</h2>" +
+          "<table><tr><th>Network</th><th>Auth Rate</th><th>Txns</th></tr>" +
+          "<tr><td>Visa</td><td>91.8%</td><td>412,118</td></tr>" +
+          "<tr><td>Mastercard</td><td>90.3%</td><td>318,492</td></tr>" +
+          "<tr><td>Amex</td><td>93.1%</td><td>118,773</td></tr>" +
+          "<tr><td>Discover</td><td>89.4%</td><td>54,201</td></tr></table>" +
+          "<h2>Top 5 Decline Codes</h2>" +
+          "<table><tr><th>Code</th><th>Reason</th><th>Count</th></tr>" +
+          "<tr><td>05</td><td>Do Not Honor</td><td>38,118</td></tr>" +
+          "<tr><td>51</td><td>Insufficient Funds</td><td>27,442</td></tr>" +
+          "<tr><td>54</td><td>Expired Card</td><td>12,201</td></tr>" +
+          "<tr><td>61</td><td>Exceeds Withdrawal Limit</td><td>9,447</td></tr>" +
+          "<tr><td>91</td><td>Issuer Unavailable</td><td>5,118</td></tr></table>" +
+          "<footer>Built by Prabhjot Singh Ahluwalia -- Georgia Tech MSCS (AI Specialization) -- " +
+          "PayCommander static demo report. For the live PDF, visit the pplx.app deployment.</footer>" +
+          "</body></html>"
+        );
+      }
+
+      let STATIC_MODE = false;
+
       const chat = document.querySelector("#chat");
       const steps = document.querySelector("#steps");
       const alertBox = document.querySelector("#alert");
@@ -580,12 +841,27 @@
         div.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
+      function renderFallback(query) {
+        const data = fallbackResponse(query);
+        chat.lastElementChild.remove();
+        if (data.blocked || data.anomaly) alertBox.classList.add("show");
+        addBubble("bot", data.answer_markdown, {
+          blocked: data.blocked || data.anomaly,
+        });
+        renderSteps(data.trace, data.blocked, data.anomaly);
+      }
+
       async function runQuery(query) {
         if (!query.trim()) return;
         input.value = "";
         alertBox.classList.remove("show");
         addBubble("user", query);
-        addBubble("bot", "Running six-agent pipeline...");
+        addBubble("bot", STATIC_MODE ? "Running static demo pipeline..." : "Running six-agent pipeline...");
+
+        if (STATIC_MODE) {
+          renderFallback(query);
+          return;
+        }
 
         try {
           const res = await fetch(`${API_BASE}/api/query`, {
@@ -602,10 +878,9 @@
           });
           renderSteps(data.trace, data.blocked, data.anomaly);
         } catch (error) {
-          chat.lastElementChild.remove();
-          addBubble("bot", `Unable to reach the PayCommander API yet. Please refresh in a moment. (${error.message})`, {
-            blocked: true,
-          });
+          STATIC_MODE = true;
+          configureStaticDownload();
+          renderFallback(query);
         }
       }
 
@@ -626,14 +901,37 @@
         });
       }
 
-      async function loadStats() {
+      function configureStaticDownload() {
+        const a = document.querySelector("#download");
+        a.textContent = "Download MIS Report (static demo)";
+        a.removeAttribute("target");
+        a.setAttribute("download", "paycommander_mis_static_demo.html");
+        a.href = "#";
+        a.onclick = (e) => {
+          e.preventDefault();
+          const blob = new Blob([buildStaticMisHtml()], { type: "text/html" });
+          const url = URL.createObjectURL(blob);
+          const tmp = document.createElement("a");
+          tmp.href = url;
+          tmp.download = "paycommander_mis_static_demo.html";
+          document.body.appendChild(tmp);
+          tmp.click();
+          tmp.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        };
+      }
+
+      async function probeBackend() {
         try {
-          const res = await fetch(`${API_BASE}/api/stats`);
+          const res = await fetch(`${API_BASE}/api/stats`, { method: "GET" });
+          if (!res.ok) throw new Error(`stats ${res.status}`);
           const stats = await res.json();
-          const merchants = stats.merchants_tracked || stats.merchant_count || 85;
+          const merchants = stats.merchants_tracked || stats.merchant_count || FALLBACK_STATS.merchants_tracked;
           document.querySelector("#stat-merchants").textContent = `${merchants}+`;
         } catch (_) {
-          document.querySelector("#stat-merchants").textContent = "85+";
+          STATIC_MODE = true;
+          document.querySelector("#stat-merchants").textContent = `${FALLBACK_STATS.merchants_tracked}+`;
+          configureStaticDownload();
         }
       }
 
@@ -644,7 +942,7 @@
 
       initPresets();
       renderIdleSteps();
-      loadStats();
+      probeBackend();
     </script>
   </body>
 </html>

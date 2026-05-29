@@ -8,7 +8,10 @@ import { mockApi } from "./mockApi";
 // In local dev, Vite proxies /api to FastAPI. In Perplexity published apps,
 // static assets are served separately from the backend sandbox, so the
 // __PORT_8000__ sentinel is rewritten to the live backend route on upload.
-const BASE = import.meta.env.PROD ? "__PORT_8000__" : "";
+// GitHub Pages is static-only, so it intentionally falls back to mock data.
+const IS_PPLX_APP =
+  typeof window !== "undefined" && window.location.hostname.endsWith("pplx.app");
+const BASE = import.meta.env.PROD && IS_PPLX_APP ? "__PORT_8000__" : "";
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   try {

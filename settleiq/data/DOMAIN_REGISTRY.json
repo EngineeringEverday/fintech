@@ -1,0 +1,37 @@
+{
+  "settlement_status": {
+    "skill_path": "skills.settlement_status",
+    "entry": "run",
+    "description": "Settlement details, totals, breakdown by status, net amounts, trace numbers for MID + date range or payout id"
+  },
+  "failure_analysis": {
+    "skill_path": "skills.failure_analysis",
+    "entry": "run",
+    "description": "Failure diagnostics, return code breakdown, root cause and CTA recommendations"
+  },
+  "trend_analysis": {
+    "skill_path": "skills.trend_analysis",
+    "entry": "run",
+    "description": "Rolling trend metrics, avg settlement time, bank/routing failure %, provisional credit lag"
+  },
+  "reserve_balance": {
+    "skill_path": "skills.reserve_balance",
+    "entry": "run",
+    "description": "Reserve account balance lookup and status"
+  },
+  "settlement_config": {
+    "skill_path": "skills.settlement_config",
+    "entry": "run",
+    "description": "Settlement schedule, frequency, type and hardcoded rail timing rules"
+  },
+  "downtime_events": {
+    "skill_path": "skills.downtime_events",
+    "entry": "run",
+    "description": "Bank or payment rail downtime / outage events lookup"
+  },
+  "chargeback_info": {
+    "skill_path": "skills.chargebacks",
+    "entry": "run",
+    "description": "Chargeback / dispute lookup by MID or transaction ID"
+  }
+}

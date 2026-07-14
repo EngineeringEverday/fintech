@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Seed mock database
+        run: python data/mock_generator.py
+
+      - name: Run UC1–UC12 pipeline demo
+        run: python pipeline_runner.py --demo
+
+      - name: Syntax-check Streamlit dashboard
+        run: python -m py_compile dashboard/app.py
+
+      - name: Syntax-check all agent modules
+        run: |
+          python -m py_compile agents/classifier.py
+          python -m py_compile agents/router.py
+          python -m py_compile agents/analyst.py
+          python -m py_compile agents/validator.py
+          python -m py_compile agents/formatter.py
+          python -m py_compile agents/logger.py
+
+      - name: Syntax-check all skill modules
+        run: |
+          python -m py_compile skills/_db.py
+          python -m py_compile skills/settlement_status.py
+          python -m py_compile skills/failure_analysis.py
+          python -m py_compile skills/trend_analysis.py
+          python -m py_compile skills/reserve_balance.py
+          python -m py_compile skills/settlement_config.py
+          python -m py_compile skills/downtime_events.py
+          python -m py_compile skills/chargebacks.py

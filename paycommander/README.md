@@ -12,10 +12,9 @@ The system ships with 80+ realistic US merchants, seven days of ACH CSVs, a 100K
 
 | Host | URL | Mode |
 | --- | --- | --- |
-| pplx.app | <https://paycommander.pplx.app> | **Live backend** -- hosted FastAPI pipeline, real SQLite warehouse, real PDF MIS export |
-| GitHub Pages | <https://prabhjotahluwalia.github.io/paycommander/> | **Static demo** -- same dashboard shell, deterministic in-browser fallback for the six recruiter queries (FastAPI not available on Pages); MIS button serves a static HTML report |
+| Vercel | <https://paycommander.vercel.app> | **Static demo** -- dashboard shell with deterministic in-browser answers for the six recruiter queries; the MIS button serves a static HTML report |
 
-The GitHub Pages build automatically detects that `/port/8000/api/*` is unreachable and switches the dashboard into a browser-side static demo: the six preset queries return canned, deterministic markdown + a six-step observer trace, the injection query still trips the Risk Ops alert, and the MIS button downloads a static HTML report. The pplx.app build keeps the full FastAPI pipeline.
+The Vercel demo runs entirely in the browser: the six preset queries return deterministic markdown plus a six-step observer trace, the injection query still trips the Risk Ops alert, and the MIS button downloads a static HTML report. Run the project locally for the full FastAPI pipeline, SQLite warehouse, and PDF export.
 
 ---
 

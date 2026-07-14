@@ -10,11 +10,10 @@ Portfolio-grade merchant risk platform for an Indian payments aggregator in the 
 
 Built to demonstrate senior PM and ML product judgment: the system turns manual, rule-based merchant review into an explainable risk decisioning workflow for high-volume transaction approval and onboarding.
 
-**Full live demo:** https://sentinel-merchant-risk.pplx.app  
-**GitHub Pages static demo:** https://prabhjotahluwalia.github.io/merchant-risk-scoring/  
+**Live portfolio demo:** https://merchant-risk-scoring.vercel.app
 **Source:** https://github.com/EngineeringEverday/fintech/tree/main/merchant-risk-scoring
 
-The `pplx.app` deployment runs the FastAPI backend. The GitHub Pages deployment is a static portfolio demo and intentionally uses the frontend's deterministic mock fallback because GitHub Pages cannot run Python/FastAPI services.
+The Vercel deployment is a static portfolio demo and intentionally uses the frontend's deterministic mock fallback. Run the project locally or with Docker for the complete FastAPI scoring service.
 
 > **Risk vs. churn.** The headline label here is **risk** — the probability of financial loss to the platform from chargebacks, fraud, or regulatory/compliance violations. Churn propensity is a secondary, exploratory model shipped alongside, not the primary decision signal.
 

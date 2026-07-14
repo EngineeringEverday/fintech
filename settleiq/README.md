@@ -126,7 +126,9 @@ See [`docs/SAMPLE_QUERIES.md`](docs/SAMPLE_QUERIES.md) for the complete command 
 
 ## Screenshots / Demo
 
-No hosted preview is included in this repo. Run locally with the 3-command setup above.
+**Portfolio preview:** https://settleiq.vercel.app
+
+The Vercel preview is a static project page. Run locally with the 3-command setup above for the full interactive Streamlit dashboard.
 
 **Dashboard panels:**
 - **Left (45%)** — Bot chat interface with mock Google login, role selector, preset UC pills, and chat history.

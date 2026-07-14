@@ -4,6 +4,8 @@
 
 ClauseGuard is a senior-AI-PM portfolio piece. The product surface, agent design, prompts, and audit UX are the deliverable; the codebase is React + Vite + Tailwind on top of the Anthropic Claude API, no backend.
 
+**Live demo:** https://clauseguard-gamma.vercel.app
+
 ---
 
 ## Why this exists
